@@ -163,4 +163,44 @@ $source = '
 
 ';
 
-print_r(json_decode($source)->softcam);
+//print_r(json_decode($source)->softcam);
+$data = json_decode($source);
+$config = '';
+foreach ($data->dvb_tune as $dvb){
+//    a10 = dvb_tune({
+//    mac = "00:22:AB:91:B5:99",
+//    type = "S",
+//    tp = "12092:H:28000"
+//})
+
+    $config .= $dvb->id.' = dvb_tune({'.PHP_EOL.
+                '   type    = "'.$dvb->type.'",'.PHP_EOL.
+                '   name    = "'.$dvb->name.'",'.PHP_EOL.
+                '   tp      = "'.$dvb->frequency.':'.$dvb->polarization.':'.$dvb->symbolrate.'",'.PHP_EOL.
+                '   adapter = "'.$dvb->adapter.'"'.PHP_EOL.
+    '})'.PHP_EOL;
+
+
+}
+
+foreach ($data->softcam as $softcam){
+//    cam_1 = newcamd({
+//    name = "AXN White",
+//    host = "127.0.0.1", port = 4011,
+//    user = "iptv_10_0d97_", pass = "iptv",
+//    key = "0102030405060708091011121314",
+//    disable_emm = 1,
+//})
+    $config .= $softcam->id.' = newcamd({'.PHP_EOL.
+        '   name    = "'.$softcam->name.'",'.PHP_EOL.
+        '   host    = "'.$softcam->host.'",'.PHP_EOL.
+        '   port    = "'.$softcam->port.'",'.PHP_EOL.
+        '   user    = "'.$softcam->user.'",'.PHP_EOL.
+        '   pass    = "'.$softcam->pass.'"'.PHP_EOL.
+        ((isset($softcam->caid)) ? '   caid    = "'.$softcam->caid.'"'.PHP_EOL : '').
+        '})'.PHP_EOL;
+
+
+}
+
+echo $config;
