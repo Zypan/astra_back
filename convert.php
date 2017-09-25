@@ -9,10 +9,14 @@
  */
 
 
-foreach (glob("*.conf") as $filename) {
+    $re = '/(?<port>\d+)/';
+
+    $filename = $argv[1];
 
     $data = json_decode(file_get_contents($filename));
-
+    $new_name = pathinfo($filename, PATHINFO_FILENAME);
+    $matches = [];
+    preg_match($re,$new_name,$matches);
 
     $config = '';
     if (isset($data->dvb_tune)) {
@@ -27,9 +31,9 @@ foreach (glob("*.conf") as $filename) {
                 '   type    = "' . $dvb->type . '",' . PHP_EOL .
                 '   name    = "' . $dvb->name . '",' . PHP_EOL .
                 '   tp      = "' . $dvb->frequency . ':' . $dvb->polarization . ':' . $dvb->symbolrate . '",' . PHP_EOL .
-                '   adapter = "' . $dvb->adapter . '"' . PHP_EOL .
+                '   adapter = "' . $dvb->adapter . '",' . PHP_EOL .
                 (isset($dvb->diseqc) ?
-                    '   diseqc  = "' . $dvb->adapter . '"' . PHP_EOL : '') .
+                    '   diseqc  = "' . $dvb->diseqc . '"' . PHP_EOL : '') .
                 '})' . PHP_EOL;
 
 
@@ -52,7 +56,7 @@ foreach (glob("*.conf") as $filename) {
                 '   host    = "' . $softcam->host . '",' . PHP_EOL .
                 '   port    = "' . $softcam->port . '",' . PHP_EOL .
                 '   user    = "' . $softcam->user . '",' . PHP_EOL .
-                '   pass    = "' . $softcam->pass . '"' . PHP_EOL .
+                '   pass    = "' . $softcam->pass . '",' . PHP_EOL .
                 ((isset($softcam->caid)) ? '   caid    = "' . $softcam->caid . '"' . PHP_EOL : '') .
                 '})' . PHP_EOL;
 
@@ -61,6 +65,9 @@ foreach (glob("*.conf") as $filename) {
 
         $config .= PHP_EOL;
     }
+
+
+
 
     if (isset($data->make_stream)) {
         foreach ($data->make_stream as $stream) {
@@ -77,16 +84,17 @@ foreach (glob("*.conf") as $filename) {
                 '   name    = "' . $stream->name . '",' . PHP_EOL .
                 '   id      = "' . $stream->id . '",' . PHP_EOL .
                 '   enable  = ' . (($stream->enable) ? 'true' : 'false') . ',' . PHP_EOL .
-                '   input   = { "' . implode('","', $stream->input) . '"},' . PHP_EOL .
+                '   input   = { "' . implode('","', $stream->input) . '" },' . PHP_EOL .
                 ((isset($stream->output)) ?
-                    '   output  = { "' . implode('","', $stream->output) . '"},' . PHP_EOL : '') .
+                    '   output  = { "' . implode('","', $stream->output) . '",' : '   output  = {') .
+                ' "http://10.255.1.40:' .$matches['port']  . '/play/'.$stream->id.'" },' .PHP_EOL.
                 '})' . PHP_EOL;
 
         }
     }
 
 
-    $new_name = pathinfo($filename, PATHINFO_FILENAME);
+
 
     file_put_contents('v4/' . $new_name.'_v4.conf', $config);
 
@@ -98,13 +106,12 @@ After=network-online.target
 [Service]
 TimeoutStartSec=10
 LimitNOFILE=65536
-ExecStart=/usr/local/bin/astra-free -c /etc/astra/v4/'.$new_name.'_v4.conf --log /var/log/'.$new_name.'_v4.log
+ExecStart=/usr/local/bin/astra-free -stream /etc/astra/v4/'.$new_name.'_v4.conf --log /var/log/'.$new_name.'_v4.log
 ExecStop=/bin/kill $MAINPID
 Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target';
 
-    file_put_contents('/lib/systemd/system/'.$new_name.'.service',$sysd);
+file_put_contents('/lib/systemd/system/'.$new_name.'.service',$sysd);
 
-}
